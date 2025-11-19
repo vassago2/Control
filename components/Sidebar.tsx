@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { User, Language, UserRole } from '../types';
 import { TRANSLATIONS } from '../constants';
-import { LayoutDashboard, BookOpen, CheckCircle, Users, Settings, LogOut, Briefcase } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom'; // Note: We will use HashRouter, but imports are consistent
+import { LayoutDashboard, BookOpen, CheckCircle, Users, Settings, LogOut, Briefcase, Contact } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   user: User;
@@ -23,6 +24,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, currentLang, onLogout, o
       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
   }`;
 
+  const hasPermission = (perm: string) => {
+    if (user.role === UserRole.ADMIN || user.permissions.includes('*')) return true;
+    return user.permissions.includes(perm);
+  };
+
+  // Configuration for Sidebar Sections
+  const sidebarSections = [
+    {
+      title: null, // No title for main dashboard
+      items: [
+        { path: '/', icon: LayoutDashboard, label: t.dashboard[currentLang], permission: 'dashboard:read' }
+      ]
+    },
+    {
+      title: t.finance[currentLang],
+      items: [
+        { path: '/accounting', icon: BookOpen, label: t.accounting[currentLang], permission: 'accounting:read' },
+        { path: '/reconciliation', icon: CheckCircle, label: t.reconciliation[currentLang], permission: 'accounting:read' },
+        { path: '/clients-vendors', icon: Contact, label: t.clients_vendors[currentLang], permission: 'crm:read' }
+      ]
+    },
+    {
+      title: t.admin_panel[currentLang],
+      items: [
+        { path: '/users', icon: Users, label: t.users[currentLang], permission: 'users:read' },
+        { path: '/settings', icon: Settings, label: t.settings[currentLang], permission: 'users:read' }
+      ]
+    }
+  ];
+
   return (
     <div className="h-full flex flex-col bg-white border-r border-slate-200">
       <div className="h-16 flex items-center px-6 border-b border-slate-200">
@@ -32,38 +63,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, currentLang, onLogout, o
 
       <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4 px-3">
         <nav className="flex-1 space-y-1">
-          <Link to="/" className={linkClass('/')}>
-            <LayoutDashboard size={20} className="mr-3" />
-            {t.dashboard[currentLang]}
-          </Link>
+          {sidebarSections.map((section, idx) => {
+            // Filter items user has access to
+            const visibleItems = section.items.filter(item => hasPermission(item.permission));
+            
+            // Don't render empty sections
+            if (visibleItems.length === 0) return null;
 
-          <Link to="/accounting" className={linkClass('/accounting')}>
-            <BookOpen size={20} className="mr-3" />
-            {t.accounting[currentLang]}
-          </Link>
-
-          <Link to="/reconciliation" className={linkClass('/reconciliation')}>
-            <CheckCircle size={20} className="mr-3" />
-            {t.reconciliation[currentLang]}
-          </Link>
-
-          {user.role === UserRole.ADMIN && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  {t.admin_panel[currentLang]}
-                </p>
+            return (
+              <div key={idx} className="mb-4">
+                {section.title && (
+                  <div className="px-3 mb-2">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      {section.title}
+                    </p>
+                  </div>
+                )}
+                {visibleItems.map(item => (
+                  <Link key={item.path} to={item.path} className={linkClass(item.path)}>
+                    <item.icon size={20} className="mr-3" />
+                    {item.label}
+                  </Link>
+                ))}
               </div>
-              <Link to="/users" className={linkClass('/users')}>
-                <Users size={20} className="mr-3" />
-                {t.users[currentLang]}
-              </Link>
-              <Link to="/settings" className={linkClass('/settings')}>
-                <Settings size={20} className="mr-3" />
-                {t.settings[currentLang]}
-              </Link>
-            </>
-          )}
+            );
+          })}
         </nav>
       </div>
 
